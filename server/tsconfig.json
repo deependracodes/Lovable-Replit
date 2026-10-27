@@ -10,7 +10,8 @@
       "outDir": "dist",
       "resolveJsonModule": true,
       "declaration": false,
-      "sourceMap": true
+      "sourceMap": true,
+      "types": ["node"]
     },
     "include": ["src", "generated/prisma"]
 }
