@@ -5,8 +5,8 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: vibe
-      POSTGRES_PASSWORD: vibe
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
       POSTGRES_DB: lovablejs
     ports:
       - "5432:5432"
@@ -14,7 +14,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vibe -d lovablejs"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lovablejs"]
       interval: 5s
       timeout: 5s
       retries: 20

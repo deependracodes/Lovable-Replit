@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "tsx watch --exclude node_modules/** src/index.ts",
     "dev:worker": "tsx watch --exclude node_modules/** src/temporal/worker.ts",
-    "dev:all": "concurrently -n server,worker -c blue,green \"npm run dev\" \"npm run dev:worker\""
+    "dev:all": "concurrently -n server,worker -c blue,green \"npm run dev\" \"npm run dev:worker\"",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
