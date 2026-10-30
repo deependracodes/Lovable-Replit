@@ -1,6 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
 import { sandboxRoot } from "../config/constants";
+import { promisify } from "util";
+import { exec, type ExecException } from "child_process";
 
 export type FileCollection = Record<string, string>; //relative path to file content
 
@@ -87,7 +89,7 @@ export async function writeSandboxFiles(
 
   await Promise.all(
     Object.entries(fileCollection).map(async ([relativePath, content]) => {
-      const {filePath} = resolveSandboxFilePath(sandboxDir, relativePath);
+      const { filePath } = resolveSandboxFilePath(sandboxDir, relativePath);
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, content, "utf8");
     }),
@@ -163,7 +165,6 @@ export async function readSandboxTree(
   return files;
 }
 
-
 export async function readSandboxFiles(
   sandboxId: string,
   relativePaths: string[],
@@ -182,4 +183,65 @@ export async function readSandboxFiles(
   );
 }
 
+const execAsync = promisify(exec);
+const SANDBOX_COMMAND_TIMEOUT_MS = 60_000;
+const SANDBOX_MAX_BUFFER = 1024 * 1024;
 
+function formatCommandSuccess(stdout: string, stderr: string): string {
+  const trimmedStdout = stdout.trim();
+  const trimmedStderr = stderr.trim();
+  if (trimmedStdout) return trimmedStdout;
+  if (trimmedStderr) return trimmedStderr;
+  return "no output";
+}
+
+function formatCommandFailure(
+  message: string,
+  stdout = "",
+  stderr = "",
+): string {
+  const parts = [`Error: ${message}`];
+  const trimmedStdout = stdout.trim();
+  const trimmedStderr = stderr.trim();
+  if (trimmedStdout) parts.push(`stdout:\n${trimmedStdout}`);
+  if (trimmedStderr) parts.push(`stderr:\n${trimmedStderr}`);
+  return parts.join("\n\n");
+}
+
+function asExecException(error: unknown): ExecException | null {
+  if (!(error instanceof Error)) return null;
+  if (!("stdout" in error || "stderr" in error)) return null;
+
+  return error as ExecException;
+}
+
+export async function runSandboxCommand(
+  sandboxId: string,
+  command: string,
+): Promise<string> {
+  try {
+    const sandboxDir = await ensureSandbox(sandboxId);
+
+    const { stdout, stderr } = await execAsync(command, {
+      cwd: sandboxDir,
+      timeout: SANDBOX_COMMAND_TIMEOUT_MS,
+      maxBuffer: SANDBOX_MAX_BUFFER,
+    });
+
+    return formatCommandSuccess(stdout,stderr);
+  } catch (error) {
+    const execError = asExecException(error);
+
+    if (execError) {
+      return formatCommandFailure(
+        execError.message,
+        String(execError.stdout ?? ""),
+        String(execError.stderr ?? ""),
+      );
+    }
+
+    return formatCommandFailure(
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
