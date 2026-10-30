@@ -3,13 +3,9 @@ import path from "path";
 import { sandboxRoot } from "../config/constants";
 import { promisify } from "util";
 import { exec, type ExecException } from "child_process";
+import { FileCollection,SandboxFileContent } from "../utils/types";
 
-export type FileCollection = Record<string, string>; //relative path to file content
 
-export type SandboxFileContent = {
-  path: string;
-  content: string;
-};
 
 export const SANDBOX_WORKDIR = "/home/user/app"; // can bring from env vars
 

@@ -4,7 +4,7 @@ import {
   type Message,
 } from "../../generated/prisma/client";
 import { prisma } from "../lib/prisma";
-import { CreateMessageInput } from "../utils/types";
+import { CreateMessageInput, MessageWithFragments, SaveResultInput } from "../utils/types";
 
 export async function findMessagesByProjectId(
   projectId: string,
@@ -33,3 +33,43 @@ export async function createMessage(
     },
   });
 }
+
+
+
+export async function saveResult(
+  input: SaveResultInput,
+): Promise<MessageWithFragments> {
+  if (input.isError) {
+    return prisma.message.create({
+      data: {
+        projectId: input.projectId,
+        content: input.content,
+        role: MessageRole.ASSISTANT,
+        type: MessageType.ERROR,
+      },
+      include: {
+        fragments: true,
+      },
+    });
+  }
+
+  return prisma.message.create({
+    data: {
+      projectId: input.projectId,
+      content: input.content,
+      role: MessageRole.ASSISTANT,
+      type: MessageType.RESULT,
+      fragments: {
+        create: {
+          title: input.title,
+          sandboxUrl: input.sandboxUrl,
+          files: input.files,
+        },
+      },
+    },
+    include: {
+      fragments: true,
+    },
+  });
+}
+
