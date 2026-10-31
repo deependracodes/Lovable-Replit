@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import { retryWithExponentialBackoff } from "../utils/retry";
 import * as activities from "./activities";
 
+// 2. connect to temporal and create a worker and run worker
 export async function connect(): Promise<NativeConnection> {
   return retryWithExponentialBackoff(
     () =>
