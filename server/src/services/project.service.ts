@@ -8,6 +8,7 @@ import {
 import { writeSandboxFiles } from "../lib/sandbox";
 import { FileCollection } from "../utils/types";
 import { saveResult } from "../repositories/message.repository";
+import { startCodeAgent } from "../temporal/client";
 
 // simple test for creating files in sandox
 const HELLO_WORLD_FILES: FileCollection = {
@@ -29,15 +30,20 @@ export async function createProject(messageContent: string) {
   const name = generateSlug(3, { format: "kebab" });
   const project = await createProjectWithMessage({ name, messageContent });
   // test
-  await writeSandboxFiles(project.id,HELLO_WORLD_FILES)
+  // await writeSandboxFiles(project.id,HELLO_WORLD_FILES)
 
   // test
-  await saveResult({
+  // await saveResult({
+  //   projectId : project.id,
+  //   title : "Hello world",
+  //   content : "Dummy conent",
+  //   files: HELLO_WORLD_FILES,
+  //   sandboxUrl : `/api/v1/preview/${project.id}`
+  // })
+
+  await startCodeAgent({
     projectId : project.id,
-    title : "Hello world",
-    content : "Dummy conent",
-    files: HELLO_WORLD_FILES,
-    sandboxUrl : `/api/v1/preview/${project.id}`
+    prompt : messageContent
   })
   return project;
 }

@@ -1,7 +1,28 @@
-export {  saveResult } from "../repositories/message.repository";
+import { runPlainPrompt } from "../lib/llm";
+import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT } from "../lib/prompt";
+import { readSandboxTree } from "../lib/sandbox";
+import { FileCollection } from "../utils/types";
+
+export { saveResult } from "../repositories/message.repository";
 
 /** Provisions (or reconnects) the E2B sandbox for a project and bootstraps the workdir. */
 export async function createSandbox(projectId: string): Promise<string> {
   //   return provisionProjectSandbox(projectId);
   return projectId;
+}
+
+export async function loadSandboxFiles(
+  sandboxId: string,
+): Promise<FileCollection> {
+  return readSandboxTree(sandboxId);
+}
+
+export async function generateTitle(summary: string) {
+  const title = await runPlainPrompt(FRAGMENT_TITLE_PROMPT, summary);
+  return title.trim().replace(/["']/g, "").trim().slice(0, 40) || "Untitled";
+}
+
+export async function generateResponse(summary: string) {
+  const response = await runPlainPrompt(RESPONSE_PROMPT, summary);
+  return response.trim();
 }

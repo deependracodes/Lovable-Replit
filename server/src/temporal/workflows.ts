@@ -9,7 +9,7 @@ import type * as activities from "./activities";
 // }
 
 
-const { createSandbox , saveResult } = proxyActivities<typeof activities>({
+const { createSandbox , saveResult,generateResponse,generateTitle } = proxyActivities<typeof activities>({
   startToCloseTimeout: "15 minutes",
   retry: {
     maximumAttempts: 3,
@@ -24,6 +24,27 @@ export interface CodeAgentInput {
 
 export async function codeAgentWorkflow(input: CodeAgentInput) {
   
+  await createSandbox(input.projectId);
+
+  const sample_summary = "A custom React app tailored to create TODO list app"
+  const  title = await generateTitle(sample_summary);
+  const resposne = await generateResponse(sample_summary)
+   await saveResult({
+    projectId : input.projectId,
+    title : title,
+    content : resposne,
+    files: {
+      "src/App.tsx" : `
+        export default function App(){
+          return <h1>Place holder for generated app</h1>
+        }
+      `
+    },
+    sandboxUrl : `/api/v1/preview/${input.projectId}`
+  })
     
+  return {
+    files : null
+  }
 
 }
