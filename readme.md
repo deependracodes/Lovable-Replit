@@ -9,6 +9,35 @@
 
 [NOTE] In this project we need a chagpt model with a minimum of 10-20$ credits , if you need a free trier feel free to use , but the response would be not great as paid models 
 
++---------------------------------------------------------------------------------+
+|                                USER & CLIENT APP                                |
++---------------------------------------------------------------------------------+
+                                         |
+                                         v (HTTP / WebSocket)
++---------------------------------------------------------------------------------+
+|                        API GATEWAY & EXPRESS ORCHESTRATOR                       |
+|  - Zod Request Validation                                                       |
+|  - JWT Authorization    
++---------------------------------------------------------------------------------+
+                                         |
+                                         v
++---------------------------------------------------------------------------------+
+|                            LANGCHAINJS AGENTIC CORE                             |
+|  - LLM Integration (OpenAI GPT-4o / Claude 3.5 Sonnet)                          |
+|  - Tool Calling & Structured Outputs (Zod Schemas)                              |
+|  - Stateful Conversation Memory (PostgreSQL / Temporal Workflows)               |
++---------------------------------------------------------------------------------+
+                                         |
+             +---------------------------+---------------------------+
+             |                                                       |
+             v (Host Execution / Local)                              v (Sandboxed Cloud / E2B)
++-----------------------------------+   +-------------------------------------+
+|      LOCAL WORKSPACE RUNTIME      |   |        E2B FIRECRACKER MICROVM      |
+|  - File System Interceptor        |   |  - Isolated Linux Container         |
+|  - AST Code Transformers          |   |  - Zero-Trust Egress/Ingress Proxy  |
+|  - Prisma Migrations              |   |  - Dynamic Vite/Node.js Dev Server  |
++-----------------------------------+   +-------------------------------------+
+
 # Basic AI Engineering Concepts
   
 - LLMS - Large language model
@@ -28,7 +57,20 @@
   * third party tools - using MCP Model context processing protocol [connectin to gmail,github,linkedIN, slack etc]
 
 
+# Ai Agent = LLM + Capability to execute tasks
 
-      
+# egress - trafic going out
+# ingres - trafic coming in
 
-// timestamp : 46
+# Agentic loop
+
+Agent ---prompt + tools----LLM---also has tools like(server tool,third party tool(mcp),functions,websearch) --- it will use it and gives us a answer back to agent--- according to answer agent do the excecution -- response back to LLM -- continue loop till app is ready
+
+As llm do not have the capability to access our system , we provided some tools like read,write files etc as tools thorugh Agents
+
+# langchain helps us in making agents and making convo with llm and tooling calling (agentic loop) easier
+
+# Why LLM does not allow us to hit thrid party api req , becuase of netowrk trafice , we can hit some malicious or random website , so on there end there servers take care of them
+   
+
+

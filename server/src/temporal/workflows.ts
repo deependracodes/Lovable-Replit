@@ -9,9 +9,21 @@ import type * as activities from "./activities";
 // }
 
 
-const { createSandbox } = proxyActivities<typeof activities>({
+const { createSandbox , saveResult } = proxyActivities<typeof activities>({
   startToCloseTimeout: "15 minutes",
   retry: {
     maximumAttempts: 3,
   },
 });
+
+
+export interface CodeAgentInput {
+  projectId:string,
+  prompt : string
+}
+
+export async function codeAgentWorkflow(input: CodeAgentInput) {
+  
+    
+
+}
