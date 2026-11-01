@@ -73,4 +73,7 @@ As llm do not have the capability to access our system , we provided some tools 
 # Why LLM does not allow us to hit thrid party api req , becuase of netowrk trafice , we can hit some malicious or random website , so on there end there servers take care of them
    
 
+// Different llm for d/f agents with diff capability and cost optimization
 
+# One workflow - different acivities
+Planner agent(think)->Design agent(ui)->Builder agent(code)->Reviewer agent(analyze)
