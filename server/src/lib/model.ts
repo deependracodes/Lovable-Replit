@@ -23,19 +23,13 @@ export function openaiChatModel(
   modelName: string,
   reasoning: boolean,
 ): ChatOpenAI {
-  const base = {
-    model: modelName,
-    apiKey: env.OPENAI_API_KEY,
-  };
-
-  if (reasoning && isOpenAiReasoningModel(modelName)) {
-    return new ChatOpenAI({
-      ...base,
-      reasoning: { effort: env.OPENAI_REASONING_EFFORT },
-    });
-  }
-
-  return new ChatOpenAI(base);
+  return new ChatOpenAI({
+    modelName: modelName,
+    apiKey: env.OPENAI_API_KEY, 
+    configuration: {
+      baseURL: "https://openrouter.ai/api/v1", 
+    },
+  });
 }
 
 export function hasLlm(): boolean {
@@ -54,5 +48,3 @@ export function getChatModel(
 
   return openaiChatModel(modelName, reasoning);
 }
-
-
