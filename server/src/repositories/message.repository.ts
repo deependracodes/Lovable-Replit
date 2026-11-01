@@ -3,8 +3,19 @@ import {
   MessageType,
   type Message,
 } from "../../generated/prisma/client";
+import { AgentChatMessage } from "../agents/types";
+import { formatPlanForAgent, parsePlanMessage } from "../lib/plan";
 import { prisma } from "../lib/prisma";
-import { CreateMessageInput, MessageWithFragments, SaveResultInput } from "../utils/types";
+import {
+  CreateMessageInput,
+  MessageWithFragments,
+  SaveResultInput,
+} from "../utils/types";
+
+function formatLoadedDbContent(content: string): string {
+  const todos = parsePlanMessage(content); // take the message from the db and parse it as todos
+  return todos ? formatPlanForAgent(todos) : content; // if the message is a plan, format it for the agent
+}
 
 export async function findMessagesByProjectId(
   projectId: string,
@@ -20,7 +31,6 @@ export async function findMessagesByProjectId(
   });
 }
 
-
 export async function createMessage(
   input: CreateMessageInput,
 ): Promise<Message> {
@@ -33,8 +43,6 @@ export async function createMessage(
     },
   });
 }
-
-
 
 export async function saveResult(
   input: SaveResultInput,
@@ -73,3 +81,20 @@ export async function saveResult(
   });
 }
 
+export async function loadMessages(
+  projectId: string,
+): Promise<AgentChatMessage[]> {
+  const messages = await prisma.message.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  return messages.reverse().map((message) => ({
+    role:
+      message.role === MessageRole.ASSISTANT
+        ? ("assistant" as const)
+        : ("user" as const),
+    content: formatLoadedDbContent(message.content),
+  }));
+}

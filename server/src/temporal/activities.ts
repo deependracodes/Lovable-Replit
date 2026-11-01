@@ -3,7 +3,7 @@ import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT } from "../lib/prompt";
 import { readSandboxTree } from "../lib/sandbox";
 import { FileCollection } from "../utils/types";
 
-export { saveResult } from "../repositories/message.repository";
+export { saveResult , loadMessages} from "../repositories/message.repository";
 
 /** Provisions (or reconnects) the E2B sandbox for a project and bootstraps the workdir. */
 export async function createSandbox(projectId: string): Promise<string> {

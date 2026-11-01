@@ -77,3 +77,15 @@ As llm do not have the capability to access our system , we provided some tools 
 
 # One workflow - different acivities
 Planner agent(think)->Design agent(ui)->Builder agent(code)->Reviewer agent(analyze)
+
+# Langchain middleware 
+  - prebuilt : ex : to-do middleware , summarization etc
+  - custom
+    - node style - less control (only either before/after llm/agent call)
+    - wrap style - more control (before and after llm/agent call)
+
+# Usefull
+  - track agents : behaviour with logging, analytics and debugging
+  - tranform prompts , tool selection, output formatting
+  - add retries , fallbacks , early termination logic
+  - rate limits , guardrails and PII detection
