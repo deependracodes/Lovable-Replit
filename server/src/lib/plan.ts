@@ -273,7 +273,6 @@ export interface PlanMessage {
     todos: TodoItem[];
     kind: typeof PLAN_KIND;
     activity?: PlanActivity;
-
 }
 
 export function parsePlanMessage(content: string): TodoItem[] | null {
