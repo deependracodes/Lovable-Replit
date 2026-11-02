@@ -34,7 +34,7 @@ export async function runPlanner(input: PlannerInput): Promise<PlannerResult> {
   // wait for agent to repsonse [agent.invoke] or stream the response [agent.stream]
   const stream = await agent.stream(agentInput, {
     streamMode: "values",
-    recursionLimit: 35,
+    recursionLimit: 25,
   });
 
 

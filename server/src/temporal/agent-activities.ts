@@ -4,6 +4,7 @@ import { hasLlm } from "../lib/model";
 import { runPlanner } from "../agents/planner/run";
 import { TodoItem, updateTodoStatusForSubagent } from "../lib/plan";
 import { savePlanMessage } from "../repositories/message.repository";
+import { runDesigner } from "../agents/designer/run";
 
 const HEARTBEAT_INTERVAL_MS = 5_000;
 
@@ -85,4 +86,50 @@ export async function runPlannerActivity(
 
     })
 
+}
+
+
+export async function runDesignerActivity(
+  input: AgentBasePayload,
+): Promise<WorkflowPipelineState> {
+    if(!hasLlm()) {
+        return {...input.state};
+    }
+
+    return withHeartbeat(async (beat) => {
+        const state = { ...input.state };
+
+        await syncPlan(input.projectId, state, state.todos, {
+          agent: "designer",
+          detail: "designing the ui",
+        });
+
+        const result = await runDesigner({
+          prompt: input.prompt,
+          todos: state.todos,
+          thread: state.thread,
+          signal: cancellationSignal(),
+          onProgress: beat,
+          onTodos: async (_todos, activity) => {
+            if(activity) {
+              await syncPlan(input.projectId, state, state.todos, activity);
+            }
+            beat();
+          }
+        });
+
+        state.thread = result.thread;
+        state.design = result.design;
+
+        state.todos = updateTodoStatusForSubagent(state.todos, "design_app", "complete"); // move the design related todos to complete status from in_progress status
+
+        state.todos = updateTodoStatusForSubagent(state.todos, "build_app", "start"); // move the build related todos to in_progress status from pending status
+
+        await syncPlan(input.projectId, state, state.todos, {
+          agent: "designer",
+          detail: "design complete. handing off to builder",
+        });
+
+        return state;
+    })
 }
