@@ -65,9 +65,7 @@ export function messageText(content: unknown): string {
     return content.map((part) => {
         if (typeof part === "string") return part;
         if (part && typeof part === "object" && "text" in part) return part.text;
-
         return "";
-
     }).join("\n").trim();
 }
 

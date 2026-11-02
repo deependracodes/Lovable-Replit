@@ -12,50 +12,57 @@ export async function runPlanner(input: PlannerInput): Promise<PlannerResult> {
     ? input.todos
     : defaultPlan(input.prompt);
 
-  // if(!hasLlm()) {
-  //   return { thread: input.thread, todos, notes: "Created plan using the default plan" }
+  if(!hasLlm()) {
+    return { thread: input.thread, todos, notes: "Created plan using the default plan" }
+  }
+
+  const agent = createAgent({
+    name: "planner",
+    model: getChatModel(env.OPENAI_MODEL, true),
+    tools: [],
+    systemPrompt: PLANNER_PROMPT,
+    version: "v1",
+    signal: input.signal,
+    middleware: [todoListMiddleware()]
+  });
+
+  const history = input.thread;
+  const agentInput = {
+    messages: history.length ? history : [{ role: "user", content: input.prompt }]
+  };
+
+  // wait for agent to repsonse [agent.invoke] or stream the response [agent.stream]
+  const stream = await agent.stream(agentInput, {
+    streamMode: "values",
+    recursionLimit: 35,
+  });
+
+
+  // let chunk =0 ;
+
+  // for await (let _ch of stream){
+  //   chunk++;
+  //   console.log("chunk", _ch, chunk);
   // }
 
-  // const agent = createAgent({
-  //   name: "planner",
-  //   model: getChatModel(env.OPENAI_MODEL, true),
-  //   tools: [],
-  //   systemPrompt: PLANNER_PROMPT,
-  //   version: "v1",
-  //   signal: input.signal,
-  //   middleware: [todoListMiddleware()]
-  // });
+  const { messages: lastMessages, todos: lastTodos } = await streamAgentValues(stream, {
+    onProgress: input.onProgress,
+  });
 
-  // const history = input.thread;
-  // const agentInput = {
-  //   messages: history.length ? history : [{ role: "user", content: input.prompt }]
-  // };
+  const parsedTodos = parsePlannerTodos(lastTodos);
 
-  // const stream = await agent.stream(agentInput, {
-  //   streamMode: "values",
-  //   recursionLimit: 12,
-  // });
+  const notes =
+    lastAssistantText(lastMessages) ||
+    "[Hardcoded] Plan created for the project";
 
-  // const { messages: lastMessages, todos: lastTodos } = await streamAgentValues(stream, {
-  //   onProgress: input.onProgress,
-  // });
 
-  // const parsedTodos = parsePlannerTodos(lastTodos);
-
-  // const notes =
-  //   lastAssistantText(lastMessages) ||
-  //   "[Hardcoded] Plan created for the project";
-
-  const notes = "[Hardcoded] Plan created for the project";
-
-  // await input.onTodos?.(parsedTodos, { agent: "planner", detail: "Plan created by the agent for the project" });
+  await input.onTodos?.(parsedTodos, { agent: "planner", detail: "Plan created by the agent for the project" });
 
   const thread = appendAgentMessage(input.thread, "planner", notes);
 
   return {
     notes,
-    // todos: parsedTodos,
-    todos,
+    todos: parsedTodos,
     thread,
   };
 }
