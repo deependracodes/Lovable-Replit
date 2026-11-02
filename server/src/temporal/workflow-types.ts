@@ -1,6 +1,4 @@
 import { TodoItem } from "../lib/plan";
-import { CodeAgentInput } from "./workflows";
-
 
 export interface WorkflowAgentMessage {
     role: "user" | "assistant" | "system";
@@ -23,6 +21,11 @@ export interface AgentBasePayload {
     sandboxId: string;
     prompt: string;
     state: WorkflowPipelineState;
+}
+
+export interface CodeAgentInput {
+  projectId:string,
+  prompt : string
 }
 
 export function emptyPipelineState(

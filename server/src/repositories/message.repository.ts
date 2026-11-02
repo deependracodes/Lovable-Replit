@@ -4,7 +4,7 @@ import {
   type Message,
 } from "../../generated/prisma/client";
 import { AgentChatMessage } from "../agents/types";
-import { formatPlanForAgent, parsePlanMessage } from "../lib/plan";
+import { formatPlanForAgent, parsePlanMessage, serializePlanMessage, TodoItem } from "../lib/plan";
 import { prisma } from "../lib/prisma";
 import {
   CreateMessageInput,
@@ -97,4 +97,34 @@ export async function loadMessages(
         : ("user" as const),
     content: formatLoadedDbContent(message.content),
   }));
+}
+
+
+
+export async function savePlanMessage(input: {
+  projectId: string,
+  messageId: string,
+  todos: TodoItem[],
+  activity?: { agent: string, detail: string} | null,
+}) {
+  const content = serializePlanMessage(input.todos, input.activity);
+  if(input.messageId) {
+      return prisma.message.update({
+          where: {
+              id: input.messageId,
+          },
+          data: {
+              content,
+          },
+      });
+  }
+
+  return prisma.message.create({
+      data: {
+          projectId: input.projectId,
+          content,
+          role: "ASSISTANT",
+          type: "RESULT"
+      }
+  })
 }

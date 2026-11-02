@@ -78,6 +78,8 @@ As llm do not have the capability to access our system , we provided some tools 
 # One workflow - different acivities
 Planner agent(think)->Design agent(ui)->Builder agent(code)->Reviewer agent(analyze)
 
+All agents will have there own tools
+
 # Langchain middleware 
   - prebuilt : ex : to-do middleware , summarization etc
   - custom
@@ -89,3 +91,18 @@ Planner agent(think)->Design agent(ui)->Builder agent(code)->Reviewer agent(anal
   - tranform prompts , tool selection, output formatting
   - add retries , fallbacks , early termination logic
   - rate limits , guardrails and PII detection
+
+
+# Planner agent has prebuilt tool called write_todos provided by todoList middleware offered by langchain itself
+
+each agent will share agentBasePayload to next agent.
+[projectId,sandboxId,propmt,state] - state is WorkflowPipelineSate
+
+Planner phase   - pending -> in_progress -> completed | cancelled
+   - Planner will create list of todos 
+       - for design
+       - for builder
+       - for review
+Designer phase  - pending -> in_progress -> completed | error
+Builder phase   - pending -> in_progress -> completed | error
+Reveiwer phase  - pending -> in_progress -> completed | error

@@ -34,7 +34,9 @@ const DESIGN_PHASE_PATTERN =
 const BUILD_PHASE_PATTERN =
   /\b(build|implement|implementation|scaffold|boilerplate|develop|code|coding|wire|integrate|integration|tailwind|state|interaction|interactions|styling|style|polish|responsive|mobile|desktop|colors|touch targets|touch-target|lucide|icons|persist|localstorage|local storage|fetch|api|hook up|connect|add feature|create feature)\b/;
 
-function phaseFromContentTag(content: string): Exclude<TodoPhase, "cancelled"> | null {
+function phaseFromContentTag(
+  content: string,
+): Exclude<TodoPhase, "cancelled"> | null {
   const match = content.toLowerCase().match(PHASE_TAG_PATTERN);
   if (!match) {
     return null;
@@ -43,7 +45,9 @@ function phaseFromContentTag(content: string): Exclude<TodoPhase, "cancelled"> |
   return match[1] as Exclude<TodoPhase, "cancelled">;
 }
 
-function phaseFromContentKeywords(content: string): Exclude<TodoPhase, "cancelled"> {
+function phaseFromContentKeywords(
+  content: string,
+): Exclude<TodoPhase, "cancelled"> {
   const normalized = content.toLowerCase();
 
   if (REVIEW_PHASE_PATTERN.test(normalized)) {
@@ -61,7 +65,9 @@ function phaseFromContentKeywords(content: string): Exclude<TodoPhase, "cancelle
   return "build";
 }
 
-export function inferToDoPhase(content: string): Exclude<TodoPhase, "cancelled"> {
+export function inferToDoPhase(
+  content: string,
+): Exclude<TodoPhase, "cancelled"> {
   const fromTag = phaseFromContentTag(content);
   if (fromTag) {
     return fromTag;
@@ -70,110 +76,105 @@ export function inferToDoPhase(content: string): Exclude<TodoPhase, "cancelled">
   return phaseFromContentKeywords(content);
 }
 
-function isTodoPhase(value: unknown): value is TodoPhase {
-  return (
-    typeof value === "string" &&
-    (PHASES as readonly string[]).includes(value)
-  );
-}
-
 export function parsePhase(_value: unknown, content: string): TodoPhase {
   return inferToDoPhase(content);
 }
 
-const STATUS_TRANSITIONS: Record<TodoStatus, TodoStatus[]> = { // graph edges
-    pending: ["in_progress", "completed"],
-    in_progress: ["completed", "cancelled"],
-    completed: [],
-    cancelled: [],
-}
+const STATUS_TRANSITIONS: Record<TodoStatus, TodoStatus[]> = {
+  // graph edges
+  pending: ["in_progress", "completed"],
+  in_progress: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
 
+// validate if a transition from one status to another is allowed based on the defined transitions
 export function canTransitionStatus(from: TodoStatus, to: TodoStatus): boolean {
-    if (from === to) return true;
+  if (from === to) return true;
 
-    return STATUS_TRANSITIONS[from]?.includes(to) ?? false;
+  return STATUS_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
 export function transitionStatus(from: TodoStatus, to: TodoStatus): TodoStatus {
-    if (canTransitionStatus(from, to)) {
-        return to;
-    }
+  if (canTransitionStatus(from, to)) {
+    return to;
+  }
 
-    throw new Error(`Cannot transition from ${from} to ${to}`);
+  throw new Error(`Cannot transition from ${from} to ${to}`);
 }
 
 function applyStatus(todo: TodoItem, to: TodoStatus): TodoItem {
-    const status = transitionStatus(todo.status, to);
-    return {
-        ...todo,
-        status,
-    };
+  const status = transitionStatus(todo.status, to);
+  return {
+    ...todo,
+    status,
+  };
 }
 
 const TOOL_NAME_TO_PHASE: Record<string, TodoPhase> = {
-    "design_app": "design",
-    "build_app": "build",
-    "build_ui": "build",
-    "review_app": "review",
-    "cancelled": "cancelled",
-}
+  design_app: "design",
+  build_app: "build",
+  build_ui: "build",
+  review_app: "review",
+  cancelled: "cancelled",
+};
 
 export function phaseForToolName(toolName: string): TodoPhase | null {
-    if (toolName in TOOL_NAME_TO_PHASE) {
-        return TOOL_NAME_TO_PHASE[toolName];
-    }
-    return null;
+  if (toolName in TOOL_NAME_TO_PHASE) {
+    return TOOL_NAME_TO_PHASE[toolName];
+  }
+  return null;
 }
 
 export function updateTodoStatusForSubagent(
-    todos: TodoItem[],
-    toolName: string,
-    stage: "start" | "complete" | "cancel"
+  todos: TodoItem[],
+  toolName: string,
+  stage: "start" | "complete" | "cancel",
 ): TodoItem[] {
+  const pipelinePhase = phaseForToolName(toolName);
+  if (!pipelinePhase) return todos;
 
-    const pipelinePhase = phaseForToolName(toolName);
-    if (!pipelinePhase) return todos;
+  const currentPhaseIndex = PHASE_INDEX[pipelinePhase];
+  let markedCurrent = false;
 
-    const currentPhaseIndex = PHASE_INDEX[pipelinePhase];
-    let markedCurrent = false;
+  return todos.map((todo) => {
+    const todoIndex = PHASE_INDEX[todo.phase];
+    if (todoIndex < currentPhaseIndex) {
+      return applyStatus(todo, "completed");
+    }
 
-    return todos.map((todo) => {
-        const todoIndex = PHASE_INDEX[todo.phase];
-        if(todoIndex < currentPhaseIndex) {
-            return applyStatus(todo, "completed");
-        }
+    if (todoIndex > currentPhaseIndex) {
+      if (todo.status === "in_progress") {
+        return applyStatus(todo, "pending");
+      }
+      return todo;
+    }
 
-        if(todoIndex > currentPhaseIndex) {
-            if(todo.status === "in_progress") {
-                return applyStatus(todo, "pending", )
-            }
-            return todo;
-        }
-        if (stage === "complete") {
-            return applyStatus(todo, "completed");
-        }
-        if(!markedCurrent && todo.status !== "completed") {
-            markedCurrent = true;
-            return applyStatus(todo, "in_progress");
-        }
+    if (stage === "complete") {
+      return applyStatus(todo, "completed");
+    }
 
-        if(todo.status === "in_progress") {
-            return applyStatus(todo, "pending");
-        }
-        return todo;
-    })
+    if (!markedCurrent && todo.status !== "completed") {
+      markedCurrent = true;
+      return applyStatus(todo, "in_progress");
+    }
+
+    if (todo.status === "in_progress") {
+      return applyStatus(todo, "pending");
+    }
+    return todo;
+  });
 }
 
 export interface TodoItem {
-    content: string;
-    status: TodoStatus; 
-    phase: TodoPhase;
+  content: string;
+  status: TodoStatus;
+  phase: TodoPhase;
 }
 
 function isTodoStatus(value: unknown): value is TodoStatus {
   return (
-    typeof value === "string" &&
-    (statuses as readonly string[]).includes(value)
+    typeof value === "string" && (statuses as readonly string[]).includes(value)
   );
 }
 
@@ -182,7 +183,11 @@ export function normalizeToDo(value: unknown): TodoItem | null {
     return null;
   }
 
-  const { content, status, phase } = value as { content?: unknown; status?: unknown; phase?: unknown };
+  const { content, status, phase } = value as {
+    content?: unknown;
+    status?: unknown;
+    phase?: unknown;
+  };
 
   if (typeof content !== "string" || content.trim() === "") {
     return null;
@@ -198,8 +203,9 @@ export function normalizeToDo(value: unknown): TodoItem | null {
 }
 
 export function parsePlannerTodos(value: unknown): TodoItem[] {
-    if(!Array.isArray(value)) return [];
-    return value.map((item) => normalizeToDo(item))
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => normalizeToDo(item))
     .filter((item): item is TodoItem => Boolean(item));
 }
 
@@ -265,14 +271,14 @@ export function formatPlanForAgent(todos: TodoItem[]): string {
 export const PLAN_KIND = "plan";
 
 export interface PlanActivity {
-    agent: string;
-    detail: string;
+  agent: string;
+  detail: string;
 }
 
 export interface PlanMessage {
-    todos: TodoItem[];
-    kind: typeof PLAN_KIND;
-    activity?: PlanActivity;
+  todos: TodoItem[];
+  kind: typeof PLAN_KIND;
+  activity?: PlanActivity;
 }
 
 export function parsePlanMessage(content: string): TodoItem[] | null {
@@ -293,15 +299,15 @@ export function parsePlanMessage(content: string): TodoItem[] | null {
 }
 
 export function serializePlanMessage(
-    todos: TodoItem[],
-    activity?: PlanActivity | null,
-): string{
-    const payload: PlanMessage = { kind: PLAN_KIND, todos };
-    if(activity?.agent && activity.detail) {
-        payload.activity = activity;
-    }
+  todos: TodoItem[],
+  activity?: PlanActivity | null,
+): string {
+  const payload: PlanMessage = { kind: PLAN_KIND, todos };
+  if (activity?.agent && activity.detail) {
+    payload.activity = activity;
+  }
 
-    return JSON.stringify(payload);
+  return JSON.stringify(payload);
 }
 
 export function defaultPlan(prompt: string): TodoItem[] {
