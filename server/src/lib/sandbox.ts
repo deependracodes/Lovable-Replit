@@ -4,11 +4,12 @@ import { FileType, Sandbox } from "e2b";
 import { sandboxRoot } from "../config/constants";
 import { promisify } from "util";
 import { exec, type ExecException } from "child_process";
-import { FileCollection,SandboxFileContent } from "../utils/types";
+import { FileCollection, SandboxFileContent } from "../utils/types";
 
-// for compiling 
-import * as esbuild from "esbuild";
-import { findProjectById, updateProjectE2bSandboxId } from "../repositories/project.repository";
+import {
+  findProjectById,
+  updateProjectE2bSandboxId,
+} from "../repositories/project.repository";
 
 // e2b sandbox workdir
 export const SANDBOX_WORKDIR = "/home/user/app"; // can bring from env vars
@@ -192,7 +193,7 @@ export async function readSandboxTree(
   return files;
   */
 
-   const sandbox = await connectE2bSandbox(sandboxId);
+  const sandbox = await connectE2bSandbox(sandboxId);
   const files: FileCollection = {};
 
   const walk = async (currentDir: string): Promise<void> => {
@@ -235,7 +236,6 @@ export async function readSandboxTree(
 
   await walk(SANDBOX_WORKDIR);
   return files;
-
 }
 
 export async function readSandboxFiles(
@@ -332,7 +332,7 @@ export async function runSandboxCommand(
     );
   }
   */
-   try {
+  try {
     const sandbox = await connectE2bSandbox(sandboxId);
     const result = await sandbox.commands.run(command, {
       cwd: SANDBOX_WORKDIR,
@@ -356,68 +356,8 @@ export async function runSandboxCommand(
 }
 
 
-// start for local compile and preview
-
-const serverNodeModules = path.resolve(__dirname, "../../node_modules");
-
-const PREVIEW_ENTRY_CANDIDATES = [
-  "src/App.tsx",
-  "src/App.jsx",
-  "app/page.tsx",
-  "src/app/page.tsx",
-  "App.tsx",
-  "App.jsx",
-  "src/main.tsx",
-  "main.tsx",
-] as const;
-
-const PREVIEW_BOOTSTRAP_FILE = ".preview-bootstrap.tsx";
 
 
-async function findSandboxAppEntry(sandboxDir: string): Promise<string> {
-  for (const candidate of PREVIEW_ENTRY_CANDIDATES) {
-    try {
-      await fs.access(path.join(sandboxDir, candidate));
-      return candidate;
-    } catch {
-      continue;
-    }
-  }
-
-  throw new Error(
-    `No preview entry found in sandbox. Tried: ${PREVIEW_ENTRY_CANDIDATES.join(", ")}`,
-  );
-}
-
-function previewBootstrapSource(appEntryRelative: string): string {
-  const importPath = `./${appEntryRelative.replace(/\\/g, "/")}`;
-  return `import React from "react";
-import { createRoot } from "react-dom/client";
-import App from ${JSON.stringify(importPath)};
-
-const container = document.getElementById("root");
-if (container) {
-  createRoot(container).render(React.createElement(App));
-}
-`;
-}
-
-function previewHtmlDocument(script: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <title>Sandbox preview</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script>${script}</script>
-  </body>
-</html>
-`;
-}
 
 export async function compileSandbox(sandboxId: string): Promise<string> {
   /* Local sandbox compile: create the sandbox directory, write a bootstrap file, and run esbuild
@@ -464,7 +404,7 @@ export async function compileSandbox(sandboxId: string): Promise<string> {
     await fs.unlink(bootstrapPath).catch(() => undefined);
   }
   */
-    const sandbox = await connectE2bSandbox(sandboxId);
+  const sandbox = await connectE2bSandbox(sandboxId);
   const result = await runCompileScript(sandbox);
 
   if (result.exitCode !== 0) {
@@ -480,28 +420,11 @@ export async function compileSandbox(sandboxId: string): Promise<string> {
   return sandbox.files.read(outputPath);
 }
 
-function formatCompileError(error: unknown): string {
-  if (error && typeof error === "object" && "errors" in error) {
-    const failures = (error as esbuild.BuildFailure).errors;
-    if (failures.length > 0) {
-      return failures
-        .map((item) => {
-          const location = item.location;
-          const where = location
-            ? `${location.file}:${location.line}:${location.column}`
-            : "bundle";
-          return `${where}: ${item.text}`;
-        })
-        .join("\n");
-    }
-  }
 
-  return error instanceof Error ? error.message : String(error);
-}
 
 /** Same as preview compile; returns a short agent-facing status string (not HTML). */
 export async function compileSandboxCheck(sandboxId: string): Promise<string> {
- /* try {
+  /* try {
     const html = await compileSandbox(sandboxId);
     const kilobytes = Math.round(Buffer.byteLength(html, "utf8") / 1024);
     return `SUCCESS: Preview bundle compiled (${kilobytes} KB HTML). No esbuild errors.`;
@@ -509,7 +432,7 @@ export async function compileSandboxCheck(sandboxId: string): Promise<string> {
     return `COMPILE FAILED:\n${formatCompileError(error)}`;
   }
     */
-   try {
+  try {
     const sandbox = await connectE2bSandbox(sandboxId);
     const result = await runCompileScript(sandbox, "--check");
     const output = result.stdout.trim() || result.stderr.trim();
