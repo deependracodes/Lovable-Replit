@@ -7,6 +7,7 @@ import { savePlanMessage } from "../repositories/message.repository";
 import { runDesigner } from "../agents/designer/run";
 import { readSandboxTree } from "../lib/sandbox";
 import { runBuilder } from "../agents/builder/run";
+import { runReviewer } from "../agents/reviewer/run";
 
 const HEARTBEAT_INTERVAL_MS = 5_000;
 
@@ -200,3 +201,64 @@ export async function runBuilderActivity(
     })
 }
 
+
+
+
+export async function runReviewerActivity(
+  input: AgentBasePayload,
+): Promise<WorkflowPipelineState> {
+    if (!hasLlm()) {
+        return { ...input.state };
+    }
+
+    return withHeartbeat(async (beat) => {
+        const state = { ...input.state };
+
+        await syncPlan(input.projectId, state, state.todos, {
+            agent: "reviewer",
+            detail: "reviewing the app",
+        });
+
+        const result = await runReviewer({
+            sandboxId: input.sandboxId,
+            task: input.prompt,
+            design: state.design,
+            files: state.files,
+            thread: state.thread,
+            signal: cancellationSignal(),
+            onProgress: beat,
+            onTodos: async (_todos, activity) => {
+                if (activity) {
+                    await syncPlan(input.projectId, state, state.todos, activity);
+                }
+                beat();
+            },
+        });
+
+        state.thread = result.thread;
+        state.review = result.review;
+
+        await syncPlan(input.projectId, state, state.todos, {
+            agent: "reviewer",
+            detail: "review complete",
+        });
+
+        return state;
+    });
+}
+
+
+export async function finalizePlanActivity(
+  input: AgentBasePayload,
+): Promise<WorkflowPipelineState> {
+  const state = { ...input.state };
+
+  state.todos = updateTodoStatusForSubagent(state.todos, "review_app", "complete");
+
+  await syncPlan(input.projectId, state, state.todos, {
+    agent: "workflow",
+    detail: "App generation complete",
+  });
+
+  return state;
+}

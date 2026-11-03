@@ -8,14 +8,24 @@ import {
   WorkflowAgentMessage,
   WorkflowPipelineState,
 } from "./workflow-types";
+import { extractMustFixForBuilder } from "./review-parse";
 
 //1. test ping workflow - one workflow can have multiple activities
 // export async function pingWorkflow(name:string) : Promise<string> {
 //     return `Hello ${name}`;
 // }
 
+
 const {
-  createSandbox,
+ createSandbox
+} = proxyActivities<typeof activities>({
+  startToCloseTimeout: "15 minutes",
+  retry: {
+    maximumAttempts: 3,
+  },
+});
+
+const {
   saveResult,
   generateResponse,
   generateTitle,
@@ -31,7 +41,9 @@ const {
 const {
   runPlannerActivity,
   runDesignerActivity,
-  runBuilderActivity
+  runBuilderActivity,
+  runReviewerActivity,
+  finalizePlanActivity
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "10 minutes",
   heartbeatTimeout: "30 seconds",
@@ -40,10 +52,15 @@ const {
   },
 });
 
+const REVIEW_FIX_ROUNDS = 3;
+
 
 export async function codeAgentWorkflow(input: CodeAgentInput) {
-  const sandboxId = await createSandbox(input.projectId);
-  const previousMessages = await loadMessages(sandboxId);
+  // const sandboxId = await createSandbox(input.projectId);
+
+  // E2B provision + bootstrap (npm deps, compile script). Agent file ops key off projectId.
+  await createSandbox(input.projectId);
+  const previousMessages = await loadMessages(input.projectId);
 
   const thread =
     previousMessages.length > 0
@@ -66,6 +83,22 @@ export async function codeAgentWorkflow(input: CodeAgentInput) {
     ...createAgentBasePayload(input, state),
     task: "Build the full React + Tailwind app from the design document and complete every build-phase step in the planner checklist.",
   });
+
+    for (let round = 0; round < REVIEW_FIX_ROUNDS; round++) {
+    state = await runReviewerActivity(createAgentBasePayload(input, state));
+    const mustFix = extractMustFixForBuilder(state.review);
+    if (!mustFix) {
+      break;
+    }
+    state = await runBuilderActivity({
+      ...createAgentBasePayload(input, state),
+      task: `Fix the following MUST FIX items from code review. Only change what is required.\n\n${mustFix}`,
+      fixPass: true,
+    });
+  }
+
+  state = await finalizePlanActivity(createAgentBasePayload(input, state));
+
   
   const sample_summary = "A custom React app tailored to create TODO list app";
   const title = await generateTitle(sample_summary);

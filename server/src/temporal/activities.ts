@@ -1,15 +1,21 @@
 import { runPlainPrompt } from "../lib/llm";
 import { FRAGMENT_TITLE_PROMPT, RESPONSE_PROMPT } from "../lib/prompt";
-import { readSandboxTree } from "../lib/sandbox";
+import { provisionProjectSandbox, readSandboxTree } from "../lib/sandbox";
 import { FileCollection } from "../utils/types";
 
-export { saveResult , loadMessages} from "../repositories/message.repository";
-export { runPlannerActivity , runDesignerActivity,  runBuilderActivity,} from "./agent-activities"
+export { saveResult, loadMessages } from "../repositories/message.repository";
+export {
+  runPlannerActivity,
+  runDesignerActivity,
+  runBuilderActivity,
+  runReviewerActivity,
+  finalizePlanActivity,
+} from "./agent-activities";
 
 /** Provisions (or reconnects) the E2B sandbox for a project and bootstraps the workdir. */
 export async function createSandbox(projectId: string): Promise<string> {
-  //   return provisionProjectSandbox(projectId);
-  return projectId;
+  return provisionProjectSandbox(projectId);
+  // return projectId;
 }
 
 export async function loadSandboxFiles(
