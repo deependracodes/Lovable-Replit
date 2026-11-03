@@ -23,7 +23,7 @@ export async function runBuilder(input: BuilderInput): Promise<BuilderResult> {
         terminalTool,
         readFilesTool,
         createOrUpdateFilesTool,
-        // compilePreviewTool,
+        compilePreviewTool,
     } = createBuilderTools(
         input.sandboxId,
         input.files,
@@ -44,7 +44,7 @@ export async function runBuilder(input: BuilderInput): Promise<BuilderResult> {
             terminalTool,
             readFilesTool,
             createOrUpdateFilesTool,
-            // compilePreviewTool,
+            compilePreviewTool,
         ],
         systemPrompt: BUILDER_PROMPT,
         version: "v1",
@@ -77,7 +77,7 @@ export async function runBuilder(input: BuilderInput): Promise<BuilderResult> {
     try {
         const stream = await agent.stream(agentInput, {
             streamMode: "values",
-            recursionLimit: 64,
+            recursionLimit: 100,
           });
     
         const result = await streamAgentValues(stream, {

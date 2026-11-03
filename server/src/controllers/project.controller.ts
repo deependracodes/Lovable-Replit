@@ -4,8 +4,9 @@ import {
   createProject,
   getAllProjects,
   getProjectById,
+  getProjectPreviewHtml,
 } from "../services/project.service";
-import { CreateProjectBody, IdParams } from "../middlewares/schemas";
+import { CreateProjectBody, IdParams, PreviewParams } from "../middlewares/schemas";
 
 export async function listProjects(
   _req: Request,
@@ -34,4 +35,26 @@ export async function createProjectHandler(
   const { message } = req.body as CreateProjectBody;
   const project = await createProject(message);
   res.status(201).json({ project });
+}
+
+
+
+export async function previewProject(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { projectId } = req.params as PreviewParams;
+
+  try {
+    const html = await getProjectPreviewHtml(projectId);
+    if (html === null) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    res.status(200).type("html").send(html);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to compile sandbox preview";
+    res.status(500).type("text/plain").send(message);
+  }
 }

@@ -5,7 +5,7 @@ import {
   findAllProjects,
   findProjectById,
 } from "../repositories/project.repository";
-import { writeSandboxFiles } from "../lib/sandbox";
+import { compileSandbox, writeSandboxFiles } from "../lib/sandbox";
 import { FileCollection } from "../utils/types";
 import { saveResult } from "../repositories/message.repository";
 import { startCodeAgent } from "../temporal/client";
@@ -46,4 +46,18 @@ export async function createProject(messageContent: string) {
     prompt : messageContent
   })
   return project;
+}
+
+
+
+
+export async function getProjectPreviewHtml(
+  projectId: string,
+): Promise<string | null> {
+  const project = await findProjectById(projectId);
+  if (!project) {
+    return null;
+  }
+
+  return compileSandbox(projectId);
 }
