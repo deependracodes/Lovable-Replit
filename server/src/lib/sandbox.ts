@@ -8,8 +8,15 @@ import { FileCollection,SandboxFileContent } from "../utils/types";
 // for compiling 
 import * as esbuild from "esbuild";
 
-
+// e2b sandbox workdir
 export const SANDBOX_WORKDIR = "/home/user/app"; // can bring from env vars
+const COMPILE_SCRIPT_NAME = ".lovable-compile.mjs";
+const COMPILE_SCRIPT_SOURCE_PATH = path.resolve(
+  __dirname,
+  "../../scripts/sandbox-compile-preview.mjs",
+);
+const PREVIEW_OUTPUT_HTML = ".preview-output.html";
+const COMPILE_SCRIPT_TIMEOUT_MS = 120_000;
 
 function assertPathInsideRoot(
   root: string,

@@ -46,7 +46,7 @@ export async function runDesigner(input: DesignerInput) : Promise<DesignerResult
 
     const stream = await agent.stream(agentInput, {
         streamMode: "values",
-        recursionLimit: 25,
+        recursionLimit: 35,
       });
 
     const { messages: lastMessages } = await streamAgentValues(stream, {
