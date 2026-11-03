@@ -30,7 +30,8 @@ const {
 
 const {
   runPlannerActivity,
-  runDesignerActivity
+  runDesignerActivity,
+  runBuilderActivity
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "10 minutes",
   heartbeatTimeout: "30 seconds",
@@ -61,6 +62,11 @@ export async function codeAgentWorkflow(input: CodeAgentInput) {
   // running the planner activity to generate todos and update the state
   state = await runPlannerActivity(createAgentBasePayload(input, state));
   state = await runDesignerActivity(createAgentBasePayload(input, state));
+   state = await runBuilderActivity({
+    ...createAgentBasePayload(input, state),
+    task: "Build the full React + Tailwind app from the design document and complete every build-phase step in the planner checklist.",
+  });
+  
   const sample_summary = "A custom React app tailored to create TODO list app";
   const title = await generateTitle(sample_summary);
   const resposne = await generateResponse(sample_summary);

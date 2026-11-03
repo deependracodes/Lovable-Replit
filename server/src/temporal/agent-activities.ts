@@ -2,9 +2,11 @@ import { cancellationSignal, heartbeat } from "@temporalio/activity";
 import { AgentBasePayload, WorkflowPipelineState } from "./workflow-types";
 import { hasLlm } from "../lib/model";
 import { runPlanner } from "../agents/planner/run";
-import { TodoItem, updateTodoStatusForSubagent } from "../lib/plan";
+import { mergeTodoStatusUpdates, TodoItem, updateTodoStatusForSubagent } from "../lib/plan";
 import { savePlanMessage } from "../repositories/message.repository";
 import { runDesigner } from "../agents/designer/run";
+import { readSandboxTree } from "../lib/sandbox";
+import { runBuilder } from "../agents/builder/run";
 
 const HEARTBEAT_INTERVAL_MS = 5_000;
 
@@ -133,3 +135,68 @@ export async function runDesignerActivity(
         return state;
     })
 }
+
+
+export async function runBuilderActivity(
+  input: AgentBasePayload & { task: string; fixPass?: boolean },
+): Promise<WorkflowPipelineState> {
+    if(!hasLlm()) {
+        return {...input.state};
+    }
+
+    return withHeartbeat(async (beat) => {
+        const state = { ...input.state };
+
+        await syncPlan(input.projectId, state, state.todos, {
+            agent: "builder",
+            detail: input.fixPass
+                ? "fixing must-fix items from review"
+                : "building the app",
+        });
+
+        const result = await runBuilder({
+            sandboxId: input.sandboxId,
+            task: input.task,
+            design: input.state.design,
+            files: input.state.files,
+            thread: input.state.thread,
+            todos: state.todos,
+            fixPass: input.fixPass,
+            signal: cancellationSignal(),
+            onProgress: beat,
+            onTodos: async (todos, activity) => {
+              if (todos.length > 0) {
+                state.todos = mergeTodoStatusUpdates(state.todos, todos);
+              }
+              if (activity) {
+                await syncPlan(input.projectId, state, state.todos, activity);
+              } else if (todos.length > 0) {
+                await syncPlan(input.projectId, state, state.todos, null);
+              }
+              beat();
+            },
+        });
+
+        state.thread = result.thread;
+        state.files = await readSandboxTree(input.sandboxId);
+        state.builderNotes = result.notes;
+
+        if (!input.fixPass) {
+            state.todos = updateTodoStatusForSubagent(
+                state.todos,
+                "build_app",
+                "complete",
+            );
+        }
+
+        await syncPlan(input.projectId, state, state.todos, {
+            agent: "builder",
+            detail: input.fixPass
+                ? "fixes applied; ready for another review"
+                : "builder complete. handing off to reviewer",
+        });
+
+        return state;
+    })
+}
+
